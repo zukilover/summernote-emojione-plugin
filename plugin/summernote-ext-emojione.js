@@ -3,35 +3,44 @@
   if (typeof define === 'function' && define.amd) {
     // AMD. Register as an anonymous module.
     define(['jquery'], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    // Node/CommonJS
+    module.exports = factory(require('jquery'));
   } else {
-    // Browser globals: jQuery
+    // Browser globals
     factory(window.jQuery);
   }
 }(function ($) {
-  // template
-  var tmpl = $.summernote.renderer.getTemplate();
+  $.extend($.summernote.plugins, {
+    'emojiOnes': function (context) {
+      var self = this;
+      var ui = $.summernote.ui;
 
-  // core functions: range, dom
-  var range = $.summernote.core.range;
-  var dom = $.summernote.core.dom;
+      var $editor = context.layoutInfo.editor;
+      var options = context.options;
+      var lang = options.langInfo;
+      lang = {
+          emojiOne: {
+            emojiOne: 'EmojiOne characters',
+            select: 'Select emoticon'
+          }
+        };
 
-  var KEY = {
-    UP: 38,
-    DOWN: 40,
-    LEFT: 37,
-    RIGHT: 39,
-    ENTER: 13
-  };
-  var COLUMN_LENGTH = 20;
-  var COLUMN_WIDTH = 28;
+      var KEY = {
+        UP: 38,
+        DOWN: 40,
+        LEFT: 37,
+        RIGHT: 39,
+        ENTER: 13
+      };
+      var COLUMN_LENGTH = 15;
+      var COLUMN_WIDTH = 35;
 
-  var currentColumn, currentRow, totalColumn, totalRow = 0;
+      var currentColumn, currentRow, totalColumn, totalRow = 0;
 
-  // emojiOne characters data set
-  // to get list execute following on each tab of http://emojione.com/demo
-  // $('#emoji-list li a').each(function(e){console.log('{ shortname: "' + $(this).data('shortname') + '", title: "' + $(this).attr('title') +'"},')})
-  var emojiOneCharDataSet = {
-    people: {
+      // special characters data set
+      var emojiOneDataSet = {
+        people: {
       title: 'People', icon: 'smile-o', icons: [
       { shortname: ":grinning:", title: "grinning face"},
       { shortname: ":grin:", title: "grinning face with smiling eyes"},
@@ -1225,361 +1234,289 @@
       { shortname: ":clock1130:", title: "clock face eleven-thirty"},
       { shortname: ":clock1230:", title: "clock face twelve-thirty"}
     ]}
-  };
+      };
 
-  /**
-   * @member plugin.emojiOne
-   * @private
-   * @param {jQuery} $editable
-   * @return {String}
-   */
-  var getTextOnRange = function ($editable) {
-    $editable.focus();
-
-    var rng = range.create();
-
-    // if range on anchor, expand range with anchor
-    if (rng.isOnAnchor()) {
-      var anchor = dom.ancestor(rng.sc, dom.isAnchor);
-      rng = range.createFromNode(anchor);
-    }
-
-    return rng.toString();
-  };
-
-  /**
-   * Make emojiOne Characters Table
-   *
-   * @member plugin.emojiOne
-   * @private
-   * @return {jQuery}
-   */
-  var makeEmojiOneCharSetTable = function (iconSet) {
-    var $table = $('<table/>');
-    for(var idx = 0; idx < emojiOneCharDataSet[iconSet].icons.length; idx++) {
-      //console.log(emojiOneCharDataSet[iconSet][idx].shortname);
-      var text = emojiOneCharDataSet[iconSet].icons[idx].shortname;
-      var image = emojione.shortnameToImage(text);
-      var title = emojiOneCharDataSet[iconSet].icons[idx].title;
-      var $td = $('<td/>').addClass('note-emojionechar-node');
-      var $tr = (idx % COLUMN_LENGTH === 0) ? $('<tr/>') : $table.find('tr').last();
-
-      $td.append($(tmpl.button(image, {
-        title: title,
-        value: encodeURIComponent(text)
-      })).css({
-        width: COLUMN_WIDTH,
-        'padding-left': '2px'
-      }));
-
-      $tr.append($td);
-      if (idx % COLUMN_LENGTH === 0) {
-        $table.append($tr);
-      }
-    }
-
-    totalRow = $table.find('tr').length;
-    totalColumn = COLUMN_LENGTH;
-
-    return $table;
-  };
-
-  /**
-   * Show emojiOne Characters and set event handlers on dialog controls.
-   *
-   * @member plugin.emojiOneChar
-   * @private
-   * @param {jQuery} $dialog
-   * @param {jQuery} $dialog
-   * @param {Object} text
-   * @return {Promise}
-   */
-  var showEmojiOneCharDialog = function ($editable, $dialog, text) {
-    return $.Deferred(function (deferred) {
-      var $emojiOneCharDialog = $dialog.find('.note-emojionechar-dialog');
-      var $emojiOneCharNode = $emojiOneCharDialog.find('div.tab-pane').find('.active').find('.note-emojionechar-node');
-      var $selectedNode = null;
-      var ARROW_KEYS = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
-      var ENTER_KEY = KEY.ENTER;
-
-      $('.note-emojionechar-dialog').on('shown.bs.modal', function(e){
-        totalRow = $(this).find('div.active table tr').length;
-        $selectedNode && removeActiveClass($selectedNode);
-        $selectedNode = null;
-        currentColumn, currentRow = 1;
-        $emojiOneCharNode = $emojiOneCharDialog.find('div.active').find('.note-emojionechar-node');
+      context.memo('button.emojiOne', function () {
+        return ui.button({
+          contents: '<i class="fa fa-font fa-flip-vertical">',
+          tooltip: lang.emojiOne.emojiOne,
+          click: function () {
+            self.show();
+          }
+        }).render();
       });
 
-      $('.note-emojionechar-dialog').on('shown.bs.tab', function(e){
-        totalRow = $(this).find('div.active table tr').length;
-        $selectedNode && removeActiveClass($selectedNode);
-        $selectedNode = null;
-        currentColumn, currentRow = 1;
-        $emojiOneCharNode = $emojiOneCharDialog.find('div.active').find('.note-emojionechar-node');
-      });
+      /**
+       * Make Special Characters Table
+       *
+       * @member plugin.emojiOne
+       * @private
+       * @return {jQuery}
+       */
+      this.makeEmojiOneSetTable = function (iconSet) {
+        var $table = $('<table/>');
+        for(var idx = 0; idx < emojiOneDataSet[iconSet].icons.length; idx++) {
+          var text = emojiOneDataSet[iconSet].icons[idx].shortname;
+          var image = emojione.shortnameToImage(text);
+          var title = emojiOneDataSet[iconSet].icons[idx].title;
+          var $td = $('<td/>').addClass('note-emojionechar-node');
+          var $tr = (idx % COLUMN_LENGTH === 0) ? $('<tr/>') : $table.find('tr').last();
+          var $button = ui.button({
+            callback: function ($node) {
+              $node.html(image);
+              $node.attr('title', text);
+              $node.attr('data-value', encodeURIComponent(text));
+              $node.css({
+                width: COLUMN_WIDTH,
+                'margin-right': '2px',
+                'margin-bottom': '2px'
+              });
+            }
+          }).render();
 
-      function addActiveClass($target) {
-        if (!$target) {
-          return;
-        }
-        $target.find('button').addClass('active');
-        $selectedNode = $target;
-      }
+          $td.append($button);
 
-      function removeActiveClass($target) {
-        $target.find('button').removeClass('active');
-        $selectedNode = null;
-      }
-
-      // find next node
-      function findNextNode(row, column) {
-        var findNode = null;
-        $.each($emojiOneCharNode, function (idx, $node) {
-          var findRow = Math.ceil((idx + 1) / COLUMN_LENGTH);
-          var findColumn = ((idx + 1) % COLUMN_LENGTH === 0) ? COLUMN_LENGTH : (idx + 1) % COLUMN_LENGTH;
-          if (findRow === row && findColumn === column) {
-            findNode = $node;
-            return false;
-          }
-        });
-        return $(findNode);
-      }
-
-      function arrowKeyHandler(keyCode) {
-        // left, right, up, down key
-        var $nextNode;
-        var lastRowColumnLength = $emojiOneCharNode.length % totalColumn;
-
-        if (KEY.LEFT === keyCode) {
-
-          if (currentColumn > 1) {
-            currentColumn = currentColumn - 1;
-          } else if (currentRow === 1 && currentColumn === 1) {
-            currentColumn = lastRowColumnLength;
-            currentRow = totalRow;
-          } else {
-            currentColumn = totalColumn;
-            currentRow = currentRow - 1;
-          }
-
-        } else if (KEY.RIGHT === keyCode) {
-
-          if (currentRow === totalRow && lastRowColumnLength === currentColumn) {
-            currentColumn = 1;
-            currentRow = 1;
-          } else if (currentColumn < totalColumn) {
-            currentColumn = currentColumn + 1;
-          } else {
-            currentColumn = 1;
-            currentRow = currentRow + 1;
-          }
-
-        } else if (KEY.UP === keyCode) {
-          if (currentRow === 1 && lastRowColumnLength < currentColumn) {
-            currentRow = totalRow - 1;
-          } else {
-            currentRow = currentRow - 1;
-          }
-        } else if (KEY.DOWN === keyCode) {
-          currentRow = currentRow + 1;
-        }
-
-        if (currentRow === totalRow && currentColumn > lastRowColumnLength) {
-          currentRow = 1;
-        } else if (currentRow > totalRow) {
-          currentRow = 1;
-        } else if (currentRow < 1) {
-          currentRow = totalRow;
-        }
-
-        $nextNode = findNextNode(currentRow, currentColumn);
-
-        if ($nextNode) {
-          removeActiveClass($selectedNode);
-          addActiveClass($nextNode);
-        }
-      }
-
-      function enterKeyHandler() {
-        if (!$selectedNode) {
-          return;
-        }
-
-        deferred.resolve(decodeURIComponent($selectedNode.find('button').attr('data-value')));
-        $emojiOneCharDialog.modal('hide');
-      }
-
-      function keyDownEventHandler(event) {
-        event.preventDefault();
-        var keyCode = event.keyCode;
-        if (keyCode === undefined || keyCode === null) {
-          return;
-        }
-        // check arrowKeys match
-        if (ARROW_KEYS.indexOf(keyCode) > -1) {
-          if ($selectedNode === null) {
-            addActiveClass($emojiOneCharNode.eq(0));
-            currentColumn = 1;
-            currentRow = 1;
-            return;
-          }
-          arrowKeyHandler(keyCode);
-        } else if (keyCode === ENTER_KEY) {
-          enterKeyHandler();
-        }
-        return false;
-      }
-
-      // remove class
-      removeActiveClass($emojiOneCharNode);
-      // find selected node
-      if (text) {
-        for (var i = 0; i < $emojiOneCharNode.length; i++) {
-          var $checkNode = $($emojiOneCharNode[i]);
-          if ($checkNode.text() === text) {
-            addActiveClass($checkNode);
-            currentRow = Math.ceil((i + 1) / COLUMN_LENGTH);
-            currentColumn = (i + 1) % COLUMN_LENGTH;
+          $tr.append($td);
+          if (idx % COLUMN_LENGTH === 0) {
+            $table.append($tr);
           }
         }
-      }
 
-      $emojiOneCharDialog.one('shown.bs.modal', function () {
-        $(document).on('keydown', keyDownEventHandler);
-        $emojiOneCharDialog.find('.note-emojionechar-node').on('click', function (event) {
-          event.preventDefault();
-          $(this).find('button').removeClass('active');
-          $(this).find('button').trigger('mouseleave');
-          deferred.resolve(decodeURIComponent($(event.currentTarget).find('button').attr('data-value')));
-          $emojiOneCharDialog.modal('hide');
-        });
-      }).one('hidden.bs.modal', function () {
-        $emojiOneCharDialog.find('.note-emojionechar-node').off('click');
-        $(document).off('keydown', keyDownEventHandler);
-        if (deferred.state() === 'pending') {
-          deferred.reject();
-        }
-      }).modal('show');
+        totalRow = $table.find('tr').length;
+        totalColumn = COLUMN_LENGTH;
 
-      // tooltip
-      // $dialog.find('button').tooltip({
-      //   container: $emojiOneCharDialog.find('div.active'),
-      //   trigger: 'hover',
-      //   placement: 'top'
-      // }).on('click', function () {
-      //   $(this).tooltip('hide');
-      // });
+        return $table;
+      };
 
-      // $editable blur
-      $editable.blur();
-    });
-  };
+      this.initialize = function () {
+        var _this = this;
+        var $container = options.dialogsInBody ? $(document.body) : $editor;
 
-  /**
-   * @class plugin.emojiOneChar
-   *
-   * emojiOne Characters Plugin
-   *
-   * ### load script
-   *
-   * ```
-   * < script src="plugin/summernote-ext-emojione.js"></script >
-   * ```
-   *
-   * ### use a plugin in toolbar
-   * ```
-   *    $("#editor").summernote({
-   *    ...
-   *    toolbar : [
-   *        ['group', [ 'emojiOneChar' ]]
-   *    ]
-   *    ...    
-   *    });
-   * ```
-   */
-  $.summernote.addPlugin({
-    /** @property {String} name name of plugin */
-    name: 'emojiOneChar',
-    /**
-     * @property {Object} buttons
-     * @property {function(object): string} buttons.emojiOneChar
-     */
-    buttons: {
-      emojiOneChar: function (lang, options) {
-        return tmpl.iconButton(options.iconPrefix + 'smile-o ', {
-          event: 'emojiOneDialog',
-          title: lang.emojiOneChar.emojiOneChar,
-          hide: true
-        });
-      }
-    },
-
-    /**
-     * @property {Object} dialogs
-     * @property {function(object, object): string} dialogs.emojiOneChar
-    */
-    dialogs: {
-      emojiOneChar: function (lang) {
         var tabs = $('<ul/>').addClass('nav nav-tabs').attr('role', 'tablist');
         var panes = $('<div/>').addClass('tab-content');
         var n = 0;
-        $.each(emojiOneCharDataSet, function(iconSet, value){
+        $.each(emojiOneDataSet, function(iconSet, value){
           var li = $('<li/>').attr('role', 'presentation');
-          li.append("<a href='#tab_" + iconSet + "' aria-controls='tab_" + iconSet + "' role='tab' data-toggle='tab' title='" + emojiOneCharDataSet[iconSet].title + "'><i class='fa fa-" + emojiOneCharDataSet[iconSet].icon + "'></i></a>");
+          li.append("<a href='#tab_" + iconSet + "' aria-controls='tab_" + iconSet + "' role='tab' data-toggle='tab' title='" + emojiOneDataSet[iconSet].title + "'><i class='fa fa-" + emojiOneDataSet[iconSet].icon + "'></i></a>");
           n == 0 && li.addClass('active');
           tabs.append(li);
 
           var div = $('<div/>').addClass('tab-pane').attr('id', 'tab_' + iconSet).attr('role', 'tabpanel');
           n == 0 && div.addClass('active');
-          var icons = makeEmojiOneCharSetTable(iconSet)[0].outerHTML;
+          var icons = _this.makeEmojiOneSetTable(iconSet)[0].outerHTML;
           div.append(icons);
           panes.append(div)
           n++;
         })
+
         var body = tabs[0].outerHTML + panes[0].outerHTML;
 
-        return tmpl.dialog('note-emojionechar-dialog', lang.emojiOneChar.select, body);
-      }
-    },
-    /**
-     * @property {Object} events
-     * @property {Function} events.showEmojiOneCharDialog
-     */
-    events: {
-      emojiOneDialog: function (event, editor, layoutInfo, value) {
-        // Get current editable node
-        var $editable = layoutInfo.editable(),
-            $dialog = layoutInfo.dialog(),
-            currentEmojiOneChar = getTextOnRange($editable);
+        this.$dialog = ui.dialog({
+          title: lang.emojiOne.select,
+          body: body
+        }).render().appendTo($container);
+      };
 
-        // save current range
-        editor.saveRange($editable);
+      this.show = function () {
+        var text = context.invoke('editor.getSelectedText');
+        context.invoke('editor.saveRange');
+        this.showemojiOneDialog(text).then(function (selectChar) {
+          context.invoke('editor.restoreRange');
 
-        showEmojiOneCharDialog($editable, $dialog, currentEmojiOneChar).then(function (selectChar) {
-          // when ok button clicked
+          // build node
+          var image = emojione.shortnameToImage(selectChar);
+          var $node = $('<span></span>').html(image)[0];
 
-          // restore range
-          editor.restoreRange($editable);
-          
-          if (selectChar) {
-            // insert emojiOne icon
-            editor.insertText($editable, ' ' + selectChar + ' ');
+          if ($node) {
+            // insert video node
+            context.invoke('editor.insertNode', $node);
           }
         }).fail(function () {
-          // when cancel button clicked
-          editor.restoreRange($editable);
+          context.invoke('editor.restoreRange');
         });
-      }
-    },
+      };
 
-    // define language
-    langs: {
-      'en-US': {
-        emojiOneChar: {
-          emojiOneChar: 'EmojiOne characters',
-          select: 'Select emoticon'
-        }
-      }
+      /**
+       * show image dialog
+       *
+       * @param {jQuery} $dialog
+       * @return {Promise}
+       */
+      this.showemojiOneDialog = function (text) {
+        return $.Deferred(function (deferred) {
+          var $emojiOneDialog = self.$dialog;
+          var $emojiOneNode = $emojiOneDialog.find('div.tab-pane').find('.active').find('.note-emojionechar-node');
+          var $selectedNode = null;
+          var ARROW_KEYS = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
+          var ENTER_KEY = KEY.ENTER;
+
+          $('.note-emojionechar-dialog').on('shown.bs.modal', function(e){
+            totalRow = $(this).find('div.active table tr').length;
+            $selectedNode && removeActiveClass($selectedNode);
+            $selectedNode = null;
+            currentColumn, currentRow = 1;
+            $emojiOneCharNode = $emojiOneDialog.find('div.active').find('.note-emojionechar-node');
+          });
+
+          $('.note-emojionechar-dialog').on('shown.bs.tab', function(e){
+            totalRow = $(this).find('div.active table tr').length;
+            $selectedNode && removeActiveClass($selectedNode);
+            $selectedNode = null;
+            currentColumn, currentRow = 1;
+            $emojiOneCharNode = $emojiOneDialog.find('div.active').find('.note-emojionechar-node');
+          });
+
+          function addActiveClass($target) {
+            if (!$target) {
+              return;
+            }
+            $target.find('button').addClass('active');
+            $selectedNode = $target;
+          }
+
+          function removeActiveClass($target) {
+            $target.find('button').removeClass('active');
+            $selectedNode = null;
+          }
+
+          // find next node
+          function findNextNode(row, column) {
+            var findNode = null;
+            $.each($emojiOneNode, function (idx, $node) {
+              var findRow = Math.ceil((idx + 1) / COLUMN_LENGTH);
+              var findColumn = ((idx + 1) % COLUMN_LENGTH === 0) ? COLUMN_LENGTH : (idx + 1) % COLUMN_LENGTH;
+              if (findRow === row && findColumn === column) {
+                findNode = $node;
+                return false;
+              }
+            });
+            return $(findNode);
+          }
+
+          function arrowKeyHandler(keyCode) {
+            // left, right, up, down key
+            var $nextNode;
+            var lastRowColumnLength = $emojiOneNode.length % totalColumn;
+
+            if (KEY.LEFT === keyCode) {
+
+              if (currentColumn > 1) {
+                currentColumn = currentColumn - 1;
+              } else if (currentRow === 1 && currentColumn === 1) {
+                currentColumn = lastRowColumnLength;
+                currentRow = totalRow;
+              } else {
+                currentColumn = totalColumn;
+                currentRow = currentRow - 1;
+              }
+
+            } else if (KEY.RIGHT === keyCode) {
+
+              if (currentRow === totalRow && lastRowColumnLength === currentColumn) {
+                currentColumn = 1;
+                currentRow = 1;
+              } else if (currentColumn < totalColumn) {
+                currentColumn = currentColumn + 1;
+              } else {
+                currentColumn = 1;
+                currentRow = currentRow + 1;
+              }
+
+            } else if (KEY.UP === keyCode) {
+              if (currentRow === 1 && lastRowColumnLength < currentColumn) {
+                currentRow = totalRow - 1;
+              } else {
+                currentRow = currentRow - 1;
+              }
+            } else if (KEY.DOWN === keyCode) {
+              currentRow = currentRow + 1;
+            }
+
+            if (currentRow === totalRow && currentColumn > lastRowColumnLength) {
+              currentRow = 1;
+            } else if (currentRow > totalRow) {
+              currentRow = 1;
+            } else if (currentRow < 1) {
+              currentRow = totalRow;
+            }
+
+            $nextNode = findNextNode(currentRow, currentColumn);
+
+            if ($nextNode) {
+              removeActiveClass($selectedNode);
+              addActiveClass($nextNode);
+            }
+          }
+
+          function enterKeyHandler() {
+            if (!$selectedNode) {
+              return;
+            }
+
+            deferred.resolve(decodeURIComponent($selectedNode.find('button').attr('data-value')));
+            $emojiOneDialog.modal('hide');
+          }
+
+          function keyDownEventHandler(event) {
+            event.preventDefault();
+            var keyCode = event.keyCode;
+            if (keyCode === undefined || keyCode === null) {
+              return;
+            }
+            // check arrowKeys match
+            if (ARROW_KEYS.indexOf(keyCode) > -1) {
+              if ($selectedNode === null) {
+                addActiveClass($emojiOneNode.eq(0));
+                currentColumn = 1;
+                currentRow = 1;
+                return;
+              }
+              arrowKeyHandler(keyCode);
+            } else if (keyCode === ENTER_KEY) {
+              enterKeyHandler();
+            }
+            return false;
+          }
+
+          // remove class
+          removeActiveClass($emojiOneNode);
+
+          // find selected node
+          if (text) {
+            for (var i = 0; i < $emojiOneNode.length; i++) {
+              var $checkNode = $($emojiOneNode[i]);
+              if ($checkNode.text() === text) {
+                addActiveClass($checkNode);
+                currentRow = Math.ceil((i + 1) / COLUMN_LENGTH);
+                currentColumn = (i + 1) % COLUMN_LENGTH;
+              }
+            }
+          }
+
+          ui.onDialogShown(self.$dialog, function () {
+
+            $(document).on('keydown', keyDownEventHandler);
+            $emojiOneDialog.find('.note-emojionechar-node').on('click', function (event) {
+              event.preventDefault();
+              $(this).find('button').removeClass('active');
+              $(this).find('button').trigger('mouseleave');
+              deferred.resolve(decodeURIComponent($(event.currentTarget).find('button').attr('data-value')));
+              $emojiOneDialog.modal('hide');
+            });
+
+          });
+
+          ui.onDialogHidden(self.$dialog, function () {
+            $emojiOneDialog.find('.note-emojionechar-node').off('click');
+            $(document).off('keydown', keyDownEventHandler);
+            if (deferred.state() === 'pending') {
+              deferred.reject();
+            }
+          });
+
+          ui.showDialog(self.$dialog);
+        });
+      };
     }
   });
 }));
