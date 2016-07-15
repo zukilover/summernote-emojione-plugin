@@ -1238,7 +1238,7 @@
 
       context.memo('button.emojiOne', function () {
         return ui.button({
-          contents: '<i class="fa fa-font fa-flip-vertical">',
+          contents: '<i class="fa fa-smile-o">',
           tooltip: lang.emojiOne.emojiOne,
           click: function () {
             self.show();
