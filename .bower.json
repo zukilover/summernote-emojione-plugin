@@ -20,5 +20,16 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "version": "0.0.1",
+  "_release": "0.0.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.0.1",
+    "commit": "5f7ae8162a14322fce023863c1eea2a37833171e"
+  },
+  "_source": "https://github.com/zukilover/summernote-emojione-plugin.git",
+  "_target": "^0.0.1",
+  "_originalSource": "summernote-emojione-plugin",
+  "_direct": true
 }
