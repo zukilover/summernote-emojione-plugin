@@ -1,0 +1,21 @@
+{
+  "name": "summernote-emojione-plugin",
+  "homepage": "https://github.com/zukilover/summernote-emojione-plugin",
+  "authors": [
+    "(@zukilover <heri.dehero@gmail.com)"
+  ],
+  "description": "Emojione plugin for Summernote 0.7+",
+  "main": "plugin/summernote-ext-emojione.js",
+  "keywords": [
+    "summernote",
+    "emojione"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
